@@ -1,0 +1,121 @@
+﻿@page "/todo"
+
+@using ToDoList.Data
+@using ToDoList.Models
+@inject ToDoService _todoService
+
+<h1>할일 목록</h1>
+
+<p>이 페이지는 할일 목록에 대한 페이지입니다..</p>
+
+<input @bind="_itxTodoTitle" @oninput="(x) => { _currentTodoTitleValue = (string)x.Value; }" />
+<input @bind="_itxTodoBody" @onkeydown="itxTodoContent_OnKeyDown" @oninput="(x) => { _currentTodoBodyValue = (string)x.Value; }" />
+<div class="btn btn-lg btn-primary">새로운 아이템</div>
+<table>
+    @foreach (var todo in _todoItems)
+    {
+        @if (!todo.IsComplete)
+        {
+    <tr>
+        <td>
+            <input type="checkbox" @bind="@todo.IsComplete" @onclick="async eventArgs => { await UpdateTodo(todo); }" />
+        </td>
+        <td>
+            <div class="btn btn-primary">편집</div>
+        </td>
+        <td>
+            <div class="btn btn-danger" @onclick="async eventArgs => { await DeleteTodo(todo); }" >삭제</div>
+        </td>
+        <td>@todo.Title</td>
+        <td>@todo.Body</td>
+        <td>@todo.Date</td>
+    </tr>
+        }
+    }
+</table>
+<h3>대충완료목록</h3>
+<table>
+    @foreach (var todo in _todoItems)
+    {
+        @if (todo.IsComplete)
+        {
+    <tr>
+        <td>
+            <input type="checkbox" @bind="@todo.IsComplete" @onclick="async eventArgs => { await UpdateTodo(todo); }" />
+        </td>
+        <td>
+            <div class="btn btn-primary">편집</div>
+        </td>
+        <td>
+            <div class="btn btn-danger" @onclick="async eventArgs => { await DeleteTodo(todo); }">삭제</div>
+        </td>
+        <td class="text-success">@todo.Title</td>
+        <td class="text-success">@todo.Body</td>
+        <td class="text-success">@todo.Date</td>
+    </tr>
+        }
+    }
+</table>
+
+@code {
+
+    private string _itxTodoTitle { get; set; }
+    private string _currentTodoTitleValue { get; set; }
+
+    private string _itxTodoBody { get; set; }
+    private string _currentTodoBodyValue { get; set; }
+    private List<Todo> _todoItems = new List<Todo>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _todoItems = _todoService.All();
+        ToDoService.Created += OnTodoCreated;
+
+        ToDoService.Deleted += OnTodoDeleted;
+    }
+
+    private void OnTodoCreated(Todo todo)
+    {
+        InvokeAsync(() => {
+
+            _todoItems.Add(todo);
+            StateHasChanged();
+
+        });
+    }
+    private void OnTodoDeleted(Todo todo)
+    {
+        InvokeAsync(() =>
+        {
+
+            _todoItems.Remove(todo);
+            StateHasChanged();
+
+        });
+    }
+    private void itxTodoContent_OnKeyDown(KeyboardEventArgs e)
+    {
+
+        if (e.Key.ToLower() == "Enter".ToLower())
+        {
+            Todo newTodo = new Todo();
+            newTodo.Body = _currentTodoBodyValue;
+            newTodo.Title = _currentTodoTitleValue;
+            newTodo.Date = DateTime.Now;
+            _todoService.Create(newTodo);
+            _itxTodoBody = string.Empty;
+            _itxTodoTitle = string.Empty;
+        }
+    }
+
+    private async Task UpdateTodo(Todo todo)
+    {
+
+        _todoService.Update(todo);
+    }
+    private async Task DeleteTodo(Todo todo)
+    {
+        _todoService.Delete(todo);
+    }
+
+}
